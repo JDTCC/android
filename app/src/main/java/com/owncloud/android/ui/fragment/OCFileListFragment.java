@@ -1087,7 +1087,7 @@ public class OCFileListFragment extends ExtendedListFragment implements
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == SetupEncryptionDialogFragment.SETUP_ENCRYPTION_REQUEST_CODE &&
                 resultCode == SetupEncryptionDialogFragment.SETUP_ENCRYPTION_RESULT_CODE &&
-                data.getBooleanExtra(SetupEncryptionDialogFragment.SUCCESS, false)) {
+            data.getBooleanExtra(SetupEncryptionDialogFragment.SUCCESS, false)) {
 
             int position = data.getIntExtra(SetupEncryptionDialogFragment.ARG_POSITION, -1);
             OCFile file = mAdapter.getItem(position);
@@ -1099,6 +1099,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
             mContainerActivity.onBrowsedDownTo(file);
             // save index and top position
             saveIndexAndTopPosition(position);
+        } else if (requestCode == 1234234) {
+            Log_OC.d(this, "data: " + data);
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
@@ -1178,6 +1180,10 @@ public class OCFileListFragment extends ExtendedListFragment implements
             return true;
         } else if (itemId == R.id.action_download_file || itemId == R.id.action_sync_file) {
             syncAndCheckFiles(checkedFiles);
+            exitSelectionMode();
+            return true;
+        } else if (itemId == R.id.action_export_file) {
+            exportFiles(checkedFiles);
             exitSelectionMode();
             return true;
         } else if (itemId == R.id.action_cancel_sync) {
@@ -1806,6 +1812,20 @@ public class OCFileListFragment extends ExtendedListFragment implements
                 showSpaceErrorDialog(file, availableSpaceOnDevice);
             }
         }
+    }
+
+    private void exportFiles(Collection<OCFile> files) {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/pdf");
+        intent.putExtra(Intent.EXTRA_TITLE, "invoice.pdf");
+
+        // Optionally, specify a URI for the directory that should be opened in
+        // the system file picker when your app creates the document.
+        //intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
+
+        startActivityForResult(intent, 12312323);
+
     }
 
     @VisibleForTesting
