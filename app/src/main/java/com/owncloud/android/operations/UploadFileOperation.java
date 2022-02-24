@@ -780,6 +780,8 @@ public class UploadFileOperation extends SyncOperation {
 
             final Long creationTimestamp = FileUtil.getCreationTimestamp(originalFile);
 
+            long creationTimeStamp = FileUtil.getCreationTimestamp(originalFile);
+
             FileChannel channel = null;
             try {
                 channel = new RandomAccessFile(mFile.getStoragePath(), "rw").getChannel();

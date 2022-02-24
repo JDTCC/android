@@ -421,6 +421,31 @@ public class UploadIT extends AbstractOnServerIT {
     }
 
     @Test
+    public void testTime() throws IOException, InterruptedException {
+        File file = getDummyFile("/empty.txt");
+
+        long creationTimestamp = Files.readAttributes(file.toPath(), BasicFileAttributes.class)
+            .creationTime()
+            .to(TimeUnit.SECONDS);
+
+        Thread.sleep(5000);
+
+        long newCreationTimestamp = Files.readAttributes(file.toPath(), BasicFileAttributes.class)
+            .creationTime()
+            .to(TimeUnit.SECONDS);
+
+        assertEquals(creationTimestamp, newCreationTimestamp);
+
+        File test = new File(file.getAbsolutePath());
+
+        long testCreationTimestamp = Files.readAttributes(test.toPath(), BasicFileAttributes.class)
+            .creationTime()
+            .to(TimeUnit.SECONDS);
+
+        assertEquals(creationTimestamp, testCreationTimestamp);
+    }
+
+    @Test
     public void testCreationAndUploadTimestamp() throws IOException {
         File file = getDummyFile("/empty.txt");
         String remotePath = "/testFile.txt";
