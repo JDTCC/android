@@ -25,9 +25,11 @@
 package com.owncloud.android.ui.fragment;
 
 import android.app.Activity;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -116,11 +118,16 @@ import com.owncloud.android.utils.theme.ThemeToolbarUtils;
 import com.owncloud.android.utils.theme.ThemeUtils;
 
 import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.io.IOUtils;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -220,6 +227,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
     protected AsyncTask<Void, Void, Boolean> remoteOperationAsyncTask;
     protected String mLimitToMimeType;
     private FloatingActionButton mFabMain;
+
+    private Collection<OCFile> filesToExport;
 
 
     @Inject DeviceInfo deviceInfo;
@@ -1099,8 +1108,24 @@ public class OCFileListFragment extends ExtendedListFragment implements
             mContainerActivity.onBrowsedDownTo(file);
             // save index and top position
             saveIndexAndTopPosition(position);
-        } else if (requestCode == 1234234) {
+        } else if (requestCode == 12312323) {
             Log_OC.d(this, "data: " + data);
+
+            Uri uri = data.getData();
+
+            ContentResolver contentResolver = getContext().getContentResolver();
+            try {
+                Uri inputUri = filesToExport.iterator().next().getStorageUri();
+                InputStream inputStream = contentResolver.openInputStream(inputUri);
+                OutputStream outputStream = contentResolver.openOutputStream(uri);
+                IOUtils.copy(inputStream, outputStream);
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
@@ -1819,6 +1844,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
         intent.putExtra(Intent.EXTRA_TITLE, "invoice.pdf");
+
+        filesToExport = files;
 
         // Optionally, specify a URI for the directory that should be opened in
         // the system file picker when your app creates the document.

@@ -20,17 +20,9 @@
 
 package com.owncloud.android.utils;
 
-import android.os.Build;
 import android.text.TextUtils;
 
-import com.owncloud.android.lib.common.utils.Log_OC;
-import com.owncloud.android.lib.resources.files.UploadFileRemoteOperation;
-
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.concurrent.TimeUnit;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;

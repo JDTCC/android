@@ -61,7 +61,6 @@ import com.owncloud.android.lib.resources.files.model.RemoteFile;
 import com.owncloud.android.operations.common.SyncOperation;
 import com.owncloud.android.utils.EncryptionUtils;
 import com.owncloud.android.utils.FileStorageUtils;
-import com.owncloud.android.utils.FileUtil;
 import com.owncloud.android.utils.MimeType;
 import com.owncloud.android.utils.MimeTypeUtil;
 import com.owncloud.android.utils.UriUtils;
@@ -779,8 +778,6 @@ public class UploadFileOperation extends SyncOperation {
             String lastModifiedTimestamp = Long.toString(originalFile.lastModified() / 1000);
 
             final Long creationTimestamp = FileUtil.getCreationTimestamp(originalFile);
-
-            long creationTimeStamp = FileUtil.getCreationTimestamp(originalFile);
 
             FileChannel channel = null;
             try {
