@@ -34,6 +34,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.ParcelFileDescriptor;
 import android.text.TextUtils;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
@@ -125,9 +126,9 @@ import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1111,15 +1112,19 @@ public class OCFileListFragment extends ExtendedListFragment implements
         } else if (requestCode == 12312323) {
             Log_OC.d(this, "data: " + data);
 
+
             Uri uri = data.getData();
 
             ContentResolver contentResolver = getContext().getContentResolver();
             try {
                 Uri inputUri = filesToExport.iterator().next().getStorageUri();
-                InputStream inputStream = contentResolver.openInputStream(inputUri);
-                OutputStream outputStream = contentResolver.openOutputStream(uri);
-                IOUtils.copy(inputStream, outputStream);
 
+                InputStream inputStream = contentResolver.openInputStream(inputUri);
+
+                ParcelFileDescriptor pfd = contentResolver.openFileDescriptor(uri, "w");
+                FileOutputStream outputStream = new FileOutputStream(pfd.getFileDescriptor());
+
+                IOUtils.copy(inputStream, outputStream);
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -1844,6 +1849,10 @@ public class OCFileListFragment extends ExtendedListFragment implements
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/pdf");
         intent.putExtra(Intent.EXTRA_TITLE, "invoice.pdf");
+
+        // choose directory
+//        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+//        intent.addCategory(Intent.CATEGORY_DEFAULT);
 
         filesToExport = files;
 

@@ -21,7 +21,6 @@
 
 package com.owncloud.android.operations;
 
-import android.accounts.Account;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.Uri;
@@ -61,6 +60,7 @@ import com.owncloud.android.lib.resources.files.model.RemoteFile;
 import com.owncloud.android.operations.common.SyncOperation;
 import com.owncloud.android.utils.EncryptionUtils;
 import com.owncloud.android.utils.FileStorageUtils;
+import com.owncloud.android.utils.FileUtil;
 import com.owncloud.android.utils.MimeType;
 import com.owncloud.android.utils.MimeTypeUtil;
 import com.owncloud.android.utils.UriUtils;
