@@ -56,6 +56,7 @@ import com.owncloud.android.R;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.files.StreamMediaFileOperation;
+import com.owncloud.android.files.services.FileDownloader;
 import com.owncloud.android.files.services.FileDownloader.FileDownloaderBinder;
 import com.owncloud.android.files.services.FileUploader.FileUploaderBinder;
 import com.owncloud.android.lib.common.operations.RemoteOperationResult;
@@ -65,6 +66,7 @@ import com.owncloud.android.lib.resources.files.model.FileVersion;
 import com.owncloud.android.lib.resources.shares.OCShare;
 import com.owncloud.android.lib.resources.shares.ShareType;
 import com.owncloud.android.lib.resources.status.OCCapability;
+import com.owncloud.android.operations.DownloadType;
 import com.owncloud.android.operations.SynchronizeFileOperation;
 import com.owncloud.android.services.OperationsService;
 import com.owncloud.android.ui.activity.ConflictsResolveActivity;
@@ -80,6 +82,7 @@ import com.owncloud.android.ui.events.EncryptionEvent;
 import com.owncloud.android.ui.events.FavoriteEvent;
 import com.owncloud.android.ui.events.FileLockEvent;
 import com.owncloud.android.ui.events.SyncEventFinished;
+import com.owncloud.android.ui.fragment.OCFileListFragment;
 import com.owncloud.android.utils.DisplayUtils;
 import com.owncloud.android.utils.EditorUtils;
 import com.owncloud.android.utils.FileStorageUtils;
@@ -880,7 +883,7 @@ public class FileOperationsHelper {
             intent.putExtra(OperationsService.EXTRA_SYNC_FILE_CONTENTS, true);
             mWaitingForOpId = fileActivity.getOperationsServiceBinder().queueNewOperation(intent);
             fileActivity.showLoadingDialog(fileActivity.getApplicationContext().
-                    getString(R.string.wait_a_moment));
+                                               getString(R.string.wait_a_moment));
 
         } else {
             Intent intent = new Intent(fileActivity, OperationsService.class);
@@ -889,6 +892,17 @@ public class FileOperationsHelper {
             intent.putExtra(OperationsService.EXTRA_REMOTE_PATH, file.getRemotePath());
             fileActivity.startService(intent);
         }
+    }
+
+    public void downloadFile(OCFile file, Uri downloadPath, User user) {
+        Intent i = new Intent(fileActivity, FileDownloader.class);
+        i.putExtra(FileDownloader.EXTRA_USER, user);
+        i.putExtra(FileDownloader.EXTRA_FILE, file);
+        i.putExtra(SendShareDialog.PACKAGE_NAME, "");
+        i.putExtra(SendShareDialog.ACTIVITY_NAME, "");
+        i.putExtra(OCFileListFragment.DOWNLOAD_TYPE, DownloadType.EXPORT);
+        i.putExtra(OCFileListFragment.DOWNLOAD_PATH, downloadPath);
+        fileActivity.startService(i);
     }
 
     public void toggleFavoriteFiles(Collection<OCFile> files, boolean shouldBeFavorite) {

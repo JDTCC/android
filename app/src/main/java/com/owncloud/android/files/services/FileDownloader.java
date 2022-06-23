@@ -29,6 +29,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -56,6 +57,7 @@ import com.owncloud.android.lib.common.operations.RemoteOperationResult.ResultCo
 import com.owncloud.android.lib.common.utils.Log_OC;
 import com.owncloud.android.lib.resources.files.FileUtils;
 import com.owncloud.android.operations.DownloadFileOperation;
+import com.owncloud.android.operations.DownloadType;
 import com.owncloud.android.providers.DocumentsStorageProvider;
 import com.owncloud.android.ui.activity.ConflictsResolveActivity;
 import com.owncloud.android.ui.activity.FileActivity;
@@ -207,6 +209,12 @@ public class FileDownloader extends Service
             final User user = intent.getParcelableExtra(EXTRA_USER);
             final OCFile file = intent.getParcelableExtra(EXTRA_FILE);
             final String behaviour = intent.getStringExtra(OCFileListFragment.DOWNLOAD_BEHAVIOUR);
+
+            DownloadType downloadType = DownloadType.DOWNLOAD;
+            if (intent.hasExtra(OCFileListFragment.DOWNLOAD_TYPE)) {
+                downloadType = (DownloadType) intent.getSerializableExtra(OCFileListFragment.DOWNLOAD_TYPE);
+            }
+            Uri downloadPath = (Uri) intent.getParcelableExtra(OCFileListFragment.DOWNLOAD_PATH);
             String activityName = intent.getStringExtra(SendShareDialog.ACTIVITY_NAME);
             String packageName = intent.getStringExtra(SendShareDialog.PACKAGE_NAME);
             conflictUploadId = intent.getLongExtra(ConflictsResolveActivity.EXTRA_CONFLICT_UPLOAD_ID, -1);
@@ -217,7 +225,9 @@ public class FileDownloader extends Service
                                                                               behaviour,
                                                                               activityName,
                                                                               packageName,
-                                                                              getBaseContext());
+                                                                              getBaseContext(),
+                                                                              downloadType,
+                                                                              downloadPath);
                 newDownload.addDatatransferProgressListener(this);
                 newDownload.addDatatransferProgressListener((FileDownloaderBinder) mBinder);
                 Pair<String, String> putResult = mPendingDownloads.putIfAbsent(user.getAccountName(),

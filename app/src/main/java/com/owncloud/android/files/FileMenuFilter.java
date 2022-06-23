@@ -198,7 +198,7 @@ public class FileMenuFilter {
 
         filterEdit(toShow, toHide, capability);
         filterDownload(toShow, toHide, synchronizing);
-        filterExport(toShow, toHide, synchronizing);
+        filterExport(toShow, toHide);
         filterRename(toShow, toHide, synchronizing);
         filterCopy(toShow, toHide, synchronizing);
         filterMove(toShow, toHide, synchronizing);
@@ -461,8 +461,8 @@ public class FileMenuFilter {
         }
     }
 
-    private void filterExport(List<Integer> toShow, List<Integer> toHide, boolean synchronizing) {
-        if (files.isEmpty() || containsFolder()) {
+    private void filterExport(List<Integer> toShow, List<Integer> toHide) {
+        if (files.isEmpty() || containsFolder() || !isSingleFile()) {
             toHide.add(R.id.action_export_file);
         } else {
             toShow.add(R.id.action_export_file);

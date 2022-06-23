@@ -182,6 +182,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
 
     public static final String DOWNLOAD_BEHAVIOUR = "DOWNLOAD_BEHAVIOUR";
     public static final String DOWNLOAD_SEND = "DOWNLOAD_SEND";
+    public static final String DOWNLOAD_TYPE = "DOWNLOAD_TYPE";
+    public static final String DOWNLOAD_PATH = "DOWNLOAD_PATH";
 
     public static final String FOLDER_LAYOUT_LIST = "LIST";
     public static final String FOLDER_LAYOUT_GRID = "GRID";
@@ -1110,27 +1112,39 @@ public class OCFileListFragment extends ExtendedListFragment implements
             // save index and top position
             saveIndexAndTopPosition(position);
         } else if (requestCode == 12312323) {
-            Log_OC.d(this, "data: " + data);
+            for (OCFile file : filesToExport) {
+                Uri uri = data.getData();
 
+                if (file.isDown()) {
+                    try {
+                        ContentResolver contentResolver = getContext().getContentResolver();
+                        Uri inputUri = filesToExport.iterator().next().getStorageUri();
+                        InputStream inputStream = contentResolver.openInputStream(inputUri);
 
-            Uri uri = data.getData();
+                        ParcelFileDescriptor pfd = contentResolver.openFileDescriptor(uri, "w");
+                        FileOutputStream outputStream = new FileOutputStream(pfd.getFileDescriptor());
 
-            ContentResolver contentResolver = getContext().getContentResolver();
-            try {
-                Uri inputUri = filesToExport.iterator().next().getStorageUri();
+                        IOUtils.copy(inputStream, outputStream);
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else {
 
-                InputStream inputStream = contentResolver.openInputStream(inputUri);
-
-                ParcelFileDescriptor pfd = contentResolver.openFileDescriptor(uri, "w");
-                FileOutputStream outputStream = new FileOutputStream(pfd.getFileDescriptor());
-
-                IOUtils.copy(inputStream, outputStream);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+                    mContainerActivity.getFileOperationsHelper().downloadFile(file,
+                                                                              uri,
+                                                                              accountManager.getUser());
+                }
             }
 
+            Log_OC.d(this, "data: " + data);
+
+//                ParcelFileDescriptor pfd = contentResolver.openFileDescriptor(uri, "w");
+//                FileOutputStream outputStream = new FileOutputStream(pfd.getFileDescriptor());
+
+//                DocumentFile documentFile = DocumentFile.fromTreeUri(getContext(), uri);
+//                Uri test = DocumentsContract.buildChildDocumentsUriUsingTree(uri, "1");
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
@@ -1846,14 +1860,17 @@ public class OCFileListFragment extends ExtendedListFragment implements
 
     private void exportFiles(Collection<OCFile> files) {
         // choose file storage with name // working
-//        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-//        intent.addCategory(Intent.CATEGORY_OPENABLE);
-//        intent.setType("application/pdf");
-//        intent.putExtra(Intent.EXTRA_TITLE, "invoice.pdf");
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+
+        OCFile file = files.iterator().next();
+
+        intent.setType(file.getMimeType());
+        intent.putExtra(Intent.EXTRA_TITLE, file.getFileName());
 
         // choose directory
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        intent.addCategory(Intent.CATEGORY_DEFAULT);
+//        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+//        intent.addCategory(Intent.CATEGORY_DEFAULT);
 
         filesToExport = files;
 
