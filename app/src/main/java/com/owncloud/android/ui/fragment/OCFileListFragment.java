@@ -1845,14 +1845,15 @@ public class OCFileListFragment extends ExtendedListFragment implements
     }
 
     private void exportFiles(Collection<OCFile> files) {
-        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("application/pdf");
-        intent.putExtra(Intent.EXTRA_TITLE, "invoice.pdf");
+        // choose file storage with name // working
+//        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+//        intent.addCategory(Intent.CATEGORY_OPENABLE);
+//        intent.setType("application/pdf");
+//        intent.putExtra(Intent.EXTRA_TITLE, "invoice.pdf");
 
         // choose directory
-//        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-//        intent.addCategory(Intent.CATEGORY_DEFAULT);
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addCategory(Intent.CATEGORY_DEFAULT);
 
         filesToExport = files;
 
