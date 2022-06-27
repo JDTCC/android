@@ -29,7 +29,6 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -214,7 +213,6 @@ public class FileDownloader extends Service
             if (intent.hasExtra(OCFileListFragment.DOWNLOAD_TYPE)) {
                 downloadType = (DownloadType) intent.getSerializableExtra(OCFileListFragment.DOWNLOAD_TYPE);
             }
-            Uri downloadPath = (Uri) intent.getParcelableExtra(OCFileListFragment.DOWNLOAD_PATH);
             String activityName = intent.getStringExtra(SendShareDialog.ACTIVITY_NAME);
             String packageName = intent.getStringExtra(SendShareDialog.PACKAGE_NAME);
             conflictUploadId = intent.getLongExtra(ConflictsResolveActivity.EXTRA_CONFLICT_UPLOAD_ID, -1);
@@ -226,8 +224,7 @@ public class FileDownloader extends Service
                                                                               activityName,
                                                                               packageName,
                                                                               getBaseContext(),
-                                                                              downloadType,
-                                                                              downloadPath);
+                                                                              downloadType);
                 newDownload.addDatatransferProgressListener(this);
                 newDownload.addDatatransferProgressListener((FileDownloaderBinder) mBinder);
                 Pair<String, String> putResult = mPendingDownloads.putIfAbsent(user.getAccountName(),
@@ -389,9 +386,9 @@ public class FileDownloader extends Service
                                        long totalToTransfer, String fileName) {
             OnDatatransferProgressListener boundListener =
                     mBoundListeners.get(mCurrentDownload.getFile().getFileId());
-            if (boundListener != null) {
+            if (boundListener != null && mCurrentDownload.getDownloadType() != DownloadType.EXPORT) {
                 boundListener.onTransferProgress(progressRate, totalTransferredSoFar,
-                        totalToTransfer, fileName);
+                                                 totalToTransfer, fileName);
             }
         }
 
@@ -474,7 +471,7 @@ public class FileDownloader extends Service
 
                     /// perform the download
                     downloadResult = mCurrentDownload.execute(mDownloadClient);
-                    if (downloadResult.isSuccess()) {
+                    if (downloadResult.isSuccess() && mCurrentDownload.getDownloadType() == DownloadType.DOWNLOAD) {
                         saveDownloadedFile();
                     }
 
@@ -544,9 +541,19 @@ public class FileDownloader extends Service
      * @param download Download operation starting.
      */
     private void notifyDownloadStart(DownloadFileOperation download) {
+        mNotificationBuilder = NotificationUtils.newNotificationBuilder(this, themeColorUtils);
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            mNotificationBuilder.setChannelId(NotificationUtils.NOTIFICATION_CHANNEL_DOWNLOAD);
+        }
+
+        if (download.getDownloadType() == DownloadType.EXPORT) {
+            // silent export in background
+            return;
+        }
+
         /// create status notification with a progress bar
         mLastPercent = 0;
-        mNotificationBuilder = NotificationUtils.newNotificationBuilder(this, themeColorUtils);
         mNotificationBuilder
             .setSmallIcon(R.drawable.notification_icon)
             .setTicker(getString(R.string.downloader_download_in_progress_ticker))
@@ -557,10 +564,6 @@ public class FileDownloader extends Service
                 String.format(getString(R.string.downloader_download_in_progress_content), 0,
                               new File(download.getSavePath()).getName())
                            );
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            mNotificationBuilder.setChannelId(NotificationUtils.NOTIFICATION_CHANNEL_DOWNLOAD);
-        }
 
         /// includes a pending intent in the notification showing the details view of the file
         Intent showDetailsIntent = null;
@@ -623,6 +626,11 @@ public class FileDownloader extends Service
                                       RemoteOperationResult downloadResult) {
         if (mNotificationManager == null) {
             mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        }
+
+        if (download.getDownloadType() == DownloadType.EXPORT) {
+            // silent export in background
+            return;
         }
 
         if (!downloadResult.isCancelled()) {

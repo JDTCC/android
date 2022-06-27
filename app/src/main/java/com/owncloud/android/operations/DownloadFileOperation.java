@@ -21,10 +21,7 @@
 
 package com.owncloud.android.operations;
 
-import android.content.ContentResolver;
 import android.content.Context;
-import android.net.Uri;
-import android.os.ParcelFileDescriptor;
 import android.text.TextUtils;
 import android.webkit.MimeTypeMap;
 
@@ -40,14 +37,11 @@ import com.owncloud.android.lib.common.operations.RemoteOperationResult;
 import com.owncloud.android.lib.common.utils.Log_OC;
 import com.owncloud.android.lib.resources.files.DownloadFileRemoteOperation;
 import com.owncloud.android.utils.EncryptionUtils;
+import com.owncloud.android.utils.FileExportUtils;
 import com.owncloud.android.utils.FileStorageUtils;
 
-import org.apache.commons.io.IOUtils;
-
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -66,7 +60,6 @@ public class DownloadFileOperation extends RemoteOperation {
     private String activityName;
     private String packageName;
     private DownloadType downloadType;
-    private Uri downloadPath;
 
     private Context context;
     private Set<OnDatatransferProgressListener> dataTransferListeners = new HashSet<>();
@@ -81,8 +74,7 @@ public class DownloadFileOperation extends RemoteOperation {
                                  String activityName,
                                  String packageName,
                                  Context context,
-                                 DownloadType downloadType,
-                                 Uri downloadPath) {
+                                 DownloadType downloadType) {
         if (user == null) {
             throw new IllegalArgumentException("Illegal null user in DownloadFileOperation " +
                                                    "creation");
@@ -99,11 +91,10 @@ public class DownloadFileOperation extends RemoteOperation {
         this.packageName = packageName;
         this.context = context;
         this.downloadType = downloadType;
-        this.downloadPath = downloadPath;
     }
 
     public DownloadFileOperation(User user, OCFile file, Context context) {
-        this(user, file, null, null, null, context, DownloadType.DOWNLOAD, Uri.parse(""));
+        this(user, file, null, null, null, context, DownloadType.DOWNLOAD);
     }
 
     public String getSavePath() {
@@ -175,13 +166,17 @@ public class DownloadFileOperation extends RemoteOperation {
         /// download will be performed to a temporal file, then moved to the final location
         File tmpFile = new File(getTmpPath());
 
-        String tmpFolder =  getTmpFolder();
+        String tmpFolder = getTmpFolder();
 
         downloadOperation = new DownloadFileRemoteOperation(file.getRemotePath(), tmpFolder);
-        Iterator<OnDatatransferProgressListener> listener = dataTransferListeners.iterator();
-        while (listener.hasNext()) {
-            downloadOperation.addDatatransferProgressListener(listener.next());
+
+        if (downloadType == DownloadType.DOWNLOAD) {
+            Iterator<OnDatatransferProgressListener> listener = dataTransferListeners.iterator();
+            while (listener.hasNext()) {
+                downloadOperation.addDatatransferProgressListener(listener.next());
+            }
         }
+
         result = downloadOperation.execute(client);
 
         if (result.isSuccess()) {
@@ -235,18 +230,12 @@ public class DownloadFileOperation extends RemoteOperation {
                     result = new RemoteOperationResult(RemoteOperationResult.ResultCode.LOCAL_STORAGE_NOT_MOVED);
                 }
             } else {
-                try {
-                    ContentResolver contentResolver = context.getContentResolver();
-                    ParcelFileDescriptor pfd = contentResolver.openFileDescriptor(downloadPath, "w");
-                    FileOutputStream outputStream = new FileOutputStream(pfd.getFileDescriptor());
-                    FileInputStream inputStream = new FileInputStream(tmpFile);
-
-
-                    IOUtils.copy(inputStream, outputStream);
-                    tmpFile.delete();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                new FileExportUtils().exportFile(file.getFileName(),
+                                                 file.getMimeType(),
+                                                 context.getContentResolver(),
+                                                 null,
+                                                 tmpFile);
+                tmpFile.delete();
             }
         }
         Log_OC.i(TAG, "Download of " + file.getRemotePath() + " to " + getSavePath() + ": " +
@@ -297,5 +286,9 @@ public class DownloadFileOperation extends RemoteOperation {
 
     public String getPackageName() {
         return this.packageName;
+    }
+
+    public DownloadType getDownloadType() {
+        return downloadType;
     }
 }

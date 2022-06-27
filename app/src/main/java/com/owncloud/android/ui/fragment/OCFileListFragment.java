@@ -25,16 +25,13 @@
 package com.owncloud.android.ui.fragment;
 
 import android.app.Activity;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.ParcelFileDescriptor;
 import android.text.TextUtils;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
@@ -58,6 +55,7 @@ import com.nextcloud.client.account.User;
 import com.nextcloud.client.account.UserAccountManager;
 import com.nextcloud.client.device.DeviceInfo;
 import com.nextcloud.client.di.Injectable;
+import com.nextcloud.client.jobs.BackgroundJobManager;
 import com.nextcloud.client.network.ClientFactory;
 import com.nextcloud.client.preferences.AppPreferences;
 import com.nextcloud.client.utils.Throttler;
@@ -119,16 +117,11 @@ import com.owncloud.android.utils.theme.ThemeToolbarUtils;
 import com.owncloud.android.utils.theme.ThemeUtils;
 
 import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.io.IOUtils;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -141,7 +134,6 @@ import javax.inject.Inject;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
-import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.ActionBar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -183,7 +175,6 @@ public class OCFileListFragment extends ExtendedListFragment implements
     public static final String DOWNLOAD_BEHAVIOUR = "DOWNLOAD_BEHAVIOUR";
     public static final String DOWNLOAD_SEND = "DOWNLOAD_SEND";
     public static final String DOWNLOAD_TYPE = "DOWNLOAD_TYPE";
-    public static final String DOWNLOAD_PATH = "DOWNLOAD_PATH";
 
     public static final String FOLDER_LAYOUT_LIST = "LIST";
     public static final String FOLDER_LAYOUT_GRID = "GRID";
@@ -197,7 +188,6 @@ public class OCFileListFragment extends ExtendedListFragment implements
     private static final String DIALOG_CREATE_FOLDER = "DIALOG_CREATE_FOLDER";
     private static final String DIALOG_CREATE_DOCUMENT = "DIALOG_CREATE_DOCUMENT";
     private static final String DIALOG_BOTTOM_SHEET = "DIALOG_BOTTOM_SHEET";
-    private static final String DIALOG_LOCK_DETAILS = "DIALOG_LOCK_DETAILS";
 
     private static final int SINGLE_SELECTION = 1;
     private static final int NOT_ENOUGH_SPACE_FRAG_REQUEST_CODE = 2;
@@ -211,6 +201,7 @@ public class OCFileListFragment extends ExtendedListFragment implements
     @Inject ThemeToolbarUtils themeToolbarUtils;
     @Inject ThemeUtils themeUtils;
     @Inject ThemeAvatarUtils themeAvatarUtils;
+    @Inject BackgroundJobManager backgroundJobManager;
 
     protected FileFragment.ContainerActivity mContainerActivity;
 
@@ -230,9 +221,6 @@ public class OCFileListFragment extends ExtendedListFragment implements
     protected AsyncTask<Void, Void, Boolean> remoteOperationAsyncTask;
     protected String mLimitToMimeType;
     private FloatingActionButton mFabMain;
-
-    private Collection<OCFile> filesToExport;
-
 
     @Inject DeviceInfo deviceInfo;
 
@@ -1111,40 +1099,6 @@ public class OCFileListFragment extends ExtendedListFragment implements
             mContainerActivity.onBrowsedDownTo(file);
             // save index and top position
             saveIndexAndTopPosition(position);
-        } else if (requestCode == 12312323) {
-            for (OCFile file : filesToExport) {
-                Uri uri = data.getData();
-
-                if (file.isDown()) {
-                    try {
-                        ContentResolver contentResolver = getContext().getContentResolver();
-                        Uri inputUri = filesToExport.iterator().next().getStorageUri();
-                        InputStream inputStream = contentResolver.openInputStream(inputUri);
-
-                        ParcelFileDescriptor pfd = contentResolver.openFileDescriptor(uri, "w");
-                        FileOutputStream outputStream = new FileOutputStream(pfd.getFileDescriptor());
-
-                        IOUtils.copy(inputStream, outputStream);
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-
-                    mContainerActivity.getFileOperationsHelper().downloadFile(file,
-                                                                              uri,
-                                                                              accountManager.getUser());
-                }
-            }
-
-            Log_OC.d(this, "data: " + data);
-
-//                ParcelFileDescriptor pfd = contentResolver.openFileDescriptor(uri, "w");
-//                FileOutputStream outputStream = new FileOutputStream(pfd.getFileDescriptor());
-
-//                DocumentFile documentFile = DocumentFile.fromTreeUri(getContext(), uri);
-//                Uri test = DocumentsContract.buildChildDocumentsUriUsingTree(uri, "1");
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
@@ -1844,13 +1798,7 @@ public class OCFileListFragment extends ExtendedListFragment implements
             // Get the remaining space on device
             long availableSpaceOnDevice = FileOperationsHelper.getAvailableSpaceOnDevice();
 
-            // Determine if space is enough to download the file, -1 available space if there in error while computing
-            boolean isSpaceEnough = true;
-            if (availableSpaceOnDevice >= 0) {
-                isSpaceEnough = checkIfEnoughSpace(availableSpaceOnDevice, file);
-            }
-
-            if (isSpaceEnough) {
+            if (FileStorageUtils.checkIfEnoughSpace(file)) {
                 mContainerActivity.getFileOperationsHelper().syncFile(file);
             } else {
                 showSpaceErrorDialog(file, availableSpaceOnDevice);
@@ -1859,47 +1807,19 @@ public class OCFileListFragment extends ExtendedListFragment implements
     }
 
     private void exportFiles(Collection<OCFile> files) {
-        // choose file storage with name // working
-        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        Context context = getContext();
 
-        OCFile file = files.iterator().next();
-
-        intent.setType(file.getMimeType());
-        intent.putExtra(Intent.EXTRA_TITLE, file.getFileName());
-
-        // choose directory
-//        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-//        intent.addCategory(Intent.CATEGORY_DEFAULT);
-
-        filesToExport = files;
-
-        // Optionally, specify a URI for the directory that should be opened in
-        // the system file picker when your app creates the document.
-        //intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
-
-        startActivityForResult(intent, 12312323);
-
-    }
-
-    @VisibleForTesting
-    public boolean checkIfEnoughSpace(long availableSpaceOnDevice, OCFile file) {
-        if (file.isFolder()) {
-            // on folders we assume that we only need difference
-            return availableSpaceOnDevice > (file.getFileLength() - localFolderSize(file));
-        } else {
-            // on files complete file must first be stored, then target gets overwritten
-            return availableSpaceOnDevice > file.getFileLength();
+        if (context != null) {
+            DisplayUtils.showSnackMessage(getView(),
+                                          context.getString(
+                                              R.string.export_start,
+                                              context.getResources().getQuantityString(R.plurals.files,
+                                                                                       files.size(),
+                                                                                       files.size())
+                                                           ));
         }
-    }
 
-    private long localFolderSize(OCFile file) {
-        if (file.getStoragePath() == null) {
-            // not yet downloaded anything
-            return 0;
-        } else {
-            return FileStorageUtils.getFolderSize(new File(file.getStoragePath()));
-        }
+        backgroundJobManager.startImmediateFilesDownloadJob(files);
     }
 
     private void showSpaceErrorDialog(OCFile file, long availableSpaceOnDevice) {

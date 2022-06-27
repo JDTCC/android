@@ -462,7 +462,7 @@ public class FileMenuFilter {
     }
 
     private void filterExport(List<Integer> toShow, List<Integer> toHide) {
-        if (files.isEmpty() || containsFolder() || !isSingleFile()) {
+        if (files.isEmpty() || containsFolder()) {
             toHide.add(R.id.action_export_file);
         } else {
             toShow.add(R.id.action_export_file);
