@@ -241,7 +241,7 @@
     <string name="end_to_end_encryption_folder_not_empty">Karpeta hau ez dago hutsik.</string>
     <string name="end_to_end_encryption_generating_keys">Gako berriak sortzen…</string>
     <string name="end_to_end_encryption_keywords_description">12 hitzek batera pasahitz oso gogorra osatzen dute, zure enkriptatutako fitxategiak zuk bakarrik ikusi eta erabil ditzazun. Idatzi eta gorde itzazu leku seguru batean.</string>
-    <string name="end_to_end_encryption_not_enabled">Muturretik muturrerako enkriptatzea zerbitzarian desgaituta dago.</string>
+    <string name="end_to_end_encryption_not_enabled">Muturretik muturrerako zifratzea zerbitzarian desgaituta dago.</string>
     <string name="end_to_end_encryption_passphrase_title">Gogoratu zure 12 hitzeko enkriptatze-pasahitza</string>
     <string name="end_to_end_encryption_password">Pasahitza…</string>
     <string name="end_to_end_encryption_retrieving_keys">Gakoak eskuratzen…</string>
@@ -794,7 +794,7 @@
     <string name="upload_file_dialog_filetype_googlemap_shortcut">Google Maps lasterbidearen fitxategia(%s)</string>
     <string name="upload_file_dialog_filetype_internet_shortcut">Internet lasterbidearen fitxategia(%s)</string>
     <string name="upload_file_dialog_filetype_snippet_text">Kode-zati testu-fitxategia(.txt)</string>
-    <string name="upload_file_dialog_title">Sartu igoko den fitxategi-izena eta fitxategi mota</string>
+    <string name="upload_file_dialog_title">Sartu kagatuko den fitxategi-izena eta fitxategi mota</string>
     <string name="upload_files">Igo fitxategiak</string>
     <string name="upload_item_action_button">Kargatu elementuaren ekintza botoia</string>
     <string name="upload_list_delete">Ezabatu</string>
